@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triangle Construction Tool</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a2332;
+    --border: #2d3a4f;
+    --text: #e6edf3;
+    --muted: #8b9cb3;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .scale-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .scale-control input {
+    width: 70px;
+    padding: 4px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .main {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  .sidebar {
+    width: 300px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .panel h2 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+  .form-row label {
+    font-size: 0.85rem;
+    min-width: 70px;
+    color: var(--muted);
+  }
+  .form-row input, .form-row select {
+    flex: 1;
+    padding: 6px 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+  .form-row input:focus, .form-row select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    width: 100%;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary {
+    background: var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: #3d4f6a; }
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.15); }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row button { flex: 1; }
+  .canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: #111827;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    cursor: crosshair;
+  }
+  .status {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.75);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    max-width: 400px;
+    pointer-events: none;
+  }
+  .info-box {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .info-box strong { color: var(--text); }
+  .result {
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.3);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.85rem;
+    margin-top: 8px;
+  }
+  .result div { margin-bottom: 4px; }
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tool-btn {
+    padding: 6px 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.8rem;
+  }
+  .tool-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .tool-btn:hover:not(.active) { background: #243044; }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  .checkbox-row input { width: auto; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Triangle Construction Tool</h1>
+    <div class="scale-control">
+      <label>Scale:</label>
+      <input type="number" id="pxPerCm" value="40" min="10" max="100" step="1">
+      <span>px / cm</span>
+    </div>
+    <div class="scale-control">
+      <label>Ruler:</label>
+      <input type="number" id="rulerLen" value="10" min="1" max="50" step="1">
+      <span>cm</span>
+    </div>
+    <div class="scale-control">
+      <span id="canvasInfo">Canvas: —</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <!-- Quick Right Triangle -->
+      <div class="panel">
+        <h2>Right Triangle (legs)</h2>
+        <div class="form-row">
+          <label>Leg a (cm)</label>
+          <input type="number" id="legA" value="8" min="0.1" step="0.1">
+        </div>
+        <div class="form-row">
+          <label>Leg b (cm)</label>
+          <input type="number" id="legB" value="15" min="0.1" step="0.1">
+        </div>
+        <div class="form-row">
+          <label>Label a</label>
+          <input type="text" id="labelA" value="8 cm" placeholder="e.g. 8 or x">
+        </div>
+        <div class="form-row">
+          <label>Label b</label>
+          <input type="text" id="labelB" value="15 cm" placeholder="e.g. 15 or y">
+        </div>
+        <div class="form-row">
+          <label>Label hyp</label>
+          <input type="text" id="labelHyp" value="" placeholder="leave blank to auto">
+        </div>
+        <button class="btn-primary" id="drawRightBtn">Draw Right Triangle</button>
+        <div class="hint">Places the right angle at the origin. Side a is along the x-axis.</div>
+        <div id="rightResult" class="result" style="display:none"></div>
+      </div>
+
+      <!-- SSS Triangle -->
+      <div class="panel">
+        <h2>Any Triangle (SSS)</h2>
+        <div class="form-row">
+          <label>Side a</label>
+          <input type="number" id="sideA" value="5" min="0.1" step="0.1">
+        </div>
+        <div class="form-row">
+          <label>Side b</label>
+          <input type="number" id="sideB" value="6" min="0.1" step="0.1">
+        </div>
+        <div class="form-row">
+          <label>Side c</label>
+          <input type="number" id="sideC" value="7" min="0.1" step="0.1">
+        </div>
+        <div class="form-row">
+          <label>Labels</label>
+          <input type="text" id="sssLabels" value="a,b,c" placeholder="a,b,c or 5,6,x">
+        </div>
+        <button class="btn-primary" id="drawSSSBtn">Draw SSS Triangle</button>
+        <div id="sssResult" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Measure tool -->
+      <div class="panel">
+        <h2>Measure Angle</h2>
+        <div class="tools">
+          <button class="tool-btn" id="measureBtn">Measure Mode</button>
+        </div>
+        <div class="hint">Click three points: vertex, then one ray, then the other ray. Angle is shown in degrees.</div>
+        <div id="measureResult" class="result" style="display:none"></div>
+      </div>
+
+      <!-- Options -->
+      <div class="panel">
+        <h2>Display Options</h2>
+        <div class="checkbox-row">
+          <input type="checkbox" id="showGrid" checked>
+          <label for="showGrid">Show cm grid</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="showLabels" checked>
+          <label for="showLabels">Show side labels</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="showAngles" checked>
+          <label for="showAngles">Show calculated angles</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="showRuler" checked>
+          <label for="showRuler">Show scale ruler</label>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel">
+        <h2>Actions</h2>
+        <div class="btn-row">
+          <button class="btn-secondary" id="clearBtn">Clear</button>
+          <button class="btn-secondary" id="exportBtn">Export PNG</button>
+        </div>
+      </div>
+
+      <div class="panel info-box">
+        <strong>Tip:</strong> Set the scale (px/cm) so the drawing matches a physical ruler held up to your screen. Common starting value is 40–50 px/cm on most monitors.
+      </div>
+    </aside>
+
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="status" id="status">Ready. Draw a triangle or enable Measure Mode.</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const statusEl = document.getElementById('status');
+  const canvasInfo = document.getElementById('canvasInfo');
+
+  let pxPerCm = 40;
+  let offsetX = 60;   // leave room for vertical ruler + labels
+  let offsetY = 50;   // leave room for horizontal ruler + labels
+  let shapes = [];           // drawn triangles / segments
+  let measurePoints = [];    // for angle measurement
+  let measureMode = false;
+  let hoverPos = null;
+  let rulerLengthCm = 10;    // current ruler length in cm
+  let autoRuler = true;      // auto-size ruler from triangle extents
+
+  // ---------- helpers ----------
+  function toCanvas(xCm, yCm) {
+    return {
+      x: offsetX + xCm * pxPerCm,
+      y: offsetY + yCm * pxPerCm
+    };
+  }
+
+  function fromCanvas(x, y) {
+    return {
+      x: (x - offsetX) / pxPerCm,
+      y: (y - offsetY) / pxPerCm
+    };
+  }
+
+  function dist(a, b) {
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  }
+
+  function angleAt(A, B, C) {
+    // angle at B formed by points A-B-C
+    const v1 = { x: A.x - B.x, y: A.y - B.y };
+    const v2 = { x: C.x - B.x, y: C.y - B.y };
+    const dot = v1.x * v2.x + v1.y * v2.y;
+    const det = v1.x * v2.y - v1.y * v2.x;
+    let ang = Math.atan2(det, dot) * 180 / Math.PI;
+    if (ang < 0) ang += 360;
+    return Math.min(ang, 360 - ang); // interior angle for triangles
+  }
+
+  function formatDeg(d) {
+    return d.toFixed(1) + '°';
+  }
+
+  // ---------- drawing ----------
+  function resize() {
+    const wrap = canvas.parentElement;
+    canvas.width = wrap.clientWidth;
+    canvas.height = wrap.clientHeight;
+    canvasInfo.textContent = `Canvas: ${Math.round(canvas.width / pxPerCm)} × ${Math.round(canvas.height / pxPerCm)} cm`;
+    redraw();
+  }
+
+  function drawGrid() {
+    if (!document.getElementById('showGrid').checked) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    const w = canvas.width;
+    const h = canvas.height;
+    // vertical
+    for (let x = offsetX; x < w; x += pxPerCm) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let x = offsetX - pxPerCm; x >= 0; x -= pxPerCm) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    // horizontal
+    for (let y = offsetY; y < h; y += pxPerCm) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    for (let y = offsetY - pxPerCm; y >= 0; y -= pxPerCm) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    // origin cross
+    ctx.strokeStyle = 'rgba(59,130,246,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(offsetX - 12, offsetY); ctx.lineTo(offsetX + 12, offsetY);
+    ctx.moveTo(offsetX, offsetY - 12); ctx.lineTo(offsetX, offsetY + 12);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function computeAutoRulerLength() {
+    if (shapes.length === 0) return 10;
+    let maxX = 0, maxY = 0;
+    shapes.forEach(t => {
+      [t.A, t.B, t.C].forEach(p => {
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      });
+    });
+    // Round up to next multiple of 5, with a little padding
+    const needed = Math.max(maxX, maxY) + 1;
+    return Math.max(5, Math.ceil(needed / 5) * 5);
+  }
+
+  function drawRuler() {
+    if (!document.getElementById('showRuler').checked) return;
+
+    const len = rulerLengthCm;
+    const tickEvery = len <= 15 ? 1 : (len <= 30 ? 2 : 5); // major labels
+    const minorEvery = 1;
+
+    ctx.save();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.fillStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.font = '11px system-ui';
+
+    // ----- Horizontal ruler (along +x, just below origin) -----
+    const yOff = -0.9; // cm below the x-axis
+    const hStart = toCanvas(0, yOff);
+    const hEnd   = toCanvas(len, yOff);
+
+    ctx.beginPath();
+    ctx.moveTo(hStart.x, hStart.y);
+    ctx.lineTo(hEnd.x, hEnd.y);
+    ctx.stroke();
+
+    for (let i = 0; i <= len; i += minorEvery) {
+      const p = toCanvas(i, yOff);
+      const isMajor = (i % tickEvery === 0) || i === 0 || i === len;
+      const tickH = isMajor ? 10 : 5;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x, p.y + tickH);
+      ctx.stroke();
+      if (isMajor) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(String(i), p.x, p.y + tickH + 2);
+      }
+    }
+    // "cm" label at the end
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('cm', hEnd.x + 8, hEnd.y + 4);
+
+    // ----- Vertical ruler (along +y, just left of origin) -----
+    const xOff = -0.9; // cm left of the y-axis
+    const vStart = toCanvas(xOff, 0);
+    const vEnd   = toCanvas(xOff, len);
+
+    ctx.beginPath();
+    ctx.moveTo(vStart.x, vStart.y);
+    ctx.lineTo(vEnd.x, vEnd.y);
+    ctx.stroke();
+
+    for (let i = 0; i <= len; i += minorEvery) {
+      const p = toCanvas(xOff, i);
+      const isMajor = (i % tickEvery === 0) || i === 0 || i === len;
+      const tickW = isMajor ? 10 : 5;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - tickW, p.y); // ticks go left
+      ctx.stroke();
+      if (isMajor) {
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(i), p.x - tickW - 3, p.y);
+      }
+    }
+    // "cm" label at the top
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('cm', vEnd.x, vEnd.y - 6);
+
+    ctx.restore();
+  }
+
+  function drawTriangle(t) {
+    const A = toCanvas(t.A.x, t.A.y);
+    const B = toCanvas(t.B.x, t.B.y);
+    const C = toCanvas(t.C.x, t.C.y);
+
+    // fill
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.lineTo(C.x, C.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(59,130,246,0.08)';
+    ctx.fill();
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // vertices
+    [A, B, C].forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fill();
+    });
+
+    // side labels
+    if (document.getElementById('showLabels').checked) {
+      const mid = (p1, p2) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 });
+      const labels = [
+        { mid: mid(B, C), text: t.labels[0] }, // side a opposite A
+        { mid: mid(A, C), text: t.labels[1] },
+        { mid: mid(A, B), text: t.labels[2] }
+      ];
+      // better: label by actual side lengths order used in construction
+      const sides = [
+        { p1: A, p2: B, text: t.sideLabels.AB },
+        { p1: B, p2: C, text: t.sideLabels.BC },
+        { p1: C, p2: A, text: t.sideLabels.CA }
+      ];
+      ctx.font = '13px system-ui';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      sides.forEach(s => {
+        if (!s.text) return;
+        const mx = (s.p1.x + s.p2.x) / 2;
+        const my = (s.p1.y + s.p2.y) / 2;
+        // offset label outward a bit
+        const dx = s.p2.x - s.p1.x;
+        const dy = s.p2.y - s.p1.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len * 14;
+        const ny = dx / len * 14;
+        // decide side of offset by centroid
+        const cx = (A.x + B.x + C.x) / 3;
+        const cy = (A.y + B.y + C.y) / 3;
+        const toC = { x: cx - mx, y: cy - my };
+        const sign = (nx * toC.x + ny * toC.y) > 0 ? -1 : 1;
+        ctx.fillText(s.text, mx + nx * sign, my + ny * sign);
+      });
+    }
+
+    // angle labels
+    if (document.getElementById('showAngles').checked && t.angles) {
+      const placeAngle = (vertex, p1, p2, deg) => {
+        const v = toCanvas(vertex.x, vertex.y);
+        const a = toCanvas(p1.x, p1.y);
+        const b = toCanvas(p2.x, p2.y);
+        const ang1 = Math.atan2(a.y - v.y, a.x - v.x);
+        const ang2 = Math.atan2(b.y - v.y, b.x - v.x);
+        let mid = (ang1 + ang2) / 2;
+        // normalize to smaller arc
+        let diff = ang2 - ang1;
+        while (diff <= -Math.PI) diff += 2 * Math.PI;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        mid = ang1 + diff / 2;
+        const r = 28;
+        const lx = v.x + Math.cos(mid) * r;
+        const ly = v.y + Math.sin(mid) * r;
+        ctx.font = '12px system-ui';
+        ctx.fillStyle = '#fbbf24';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(formatDeg(deg), lx, ly);
+      };
+      placeAngle(t.A, t.B, t.C, t.angles.A);
+      placeAngle(t.B, t.A, t.C, t.angles.B);
+      placeAngle(t.C, t.A, t.B, t.angles.C);
+    }
+  }
+
+  function drawMeasure() {
+    if (measurePoints.length === 0) return;
+    ctx.save();
+    measurePoints.forEach((p, i) => {
+      const c = toCanvas(p.x, p.y);
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = i === 0 ? '#f59e0b' : '#22c55e';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+    if (measurePoints.length >= 2) {
+      const a = toCanvas(measurePoints[0].x, measurePoints[0].y);
+      const b = toCanvas(measurePoints[1].x, measurePoints[1].y);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    if (measurePoints.length === 3) {
+      const a = toCanvas(measurePoints[0].x, measurePoints[0].y);
+      const c = toCanvas(measurePoints[2].x, measurePoints[2].y);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    // live ray while measuring
+    if (measureMode && measurePoints.length === 1 && hoverPos) {
+      const a = toCanvas(measurePoints[0].x, measurePoints[0].y);
+      const h = toCanvas(hoverPos.x, hoverPos.y);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(h.x, h.y);
+      ctx.strokeStyle = 'rgba(245,158,11,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (measureMode && measurePoints.length === 2 && hoverPos) {
+      const a = toCanvas(measurePoints[0].x, measurePoints[0].y);
+      const h = toCanvas(hoverPos.x, hoverPos.y);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(h.x, h.y);
+      ctx.strokeStyle = 'rgba(245,158,11,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+
+  function redraw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
+    drawRuler();
+    shapes.forEach(drawTriangle);
+    drawMeasure();
+  }
+
+  // ---------- construction ----------
+  function buildRightTriangle() {
+    const a = parseFloat(document.getElementById('legA').value);
+    const b = parseFloat(document.getElementById('legB').value);
+    if (!(a > 0 && b > 0)) {
+      statusEl.textContent = 'Legs must be positive numbers.';
+      return;
+    }
+    const hyp = Math.hypot(a, b);
+    const labelA = document.getElementById('labelA').value.trim() || a + ' cm';
+    const labelB = document.getElementById('labelB').value.trim() || b + ' cm';
+    let labelHyp = document.getElementById('labelHyp').value.trim();
+    if (!labelHyp) labelHyp = hyp.toFixed(2) + ' cm';
+
+    // Place right angle at origin (A), leg a along x, leg b along y
+    // Vertices: A(0,0) right angle, B(a,0), C(0,b)
+    const A = { x: 0, y: 0 };
+    const B = { x: a, y: 0 };
+    const C = { x: 0, y: b };
+
+    // angles
+    const angA = 90;
+    const angB = Math.atan2(b, a) * 180 / Math.PI; // at B (adjacent to leg a)
+    const angC = 90 - angB;
+
+    const tri = {
+      type: 'right',
+      A, B, C,
+      sideLabels: { AB: labelA, BC: labelHyp, CA: labelB },
+      labels: [labelHyp, labelB, labelA],
+      angles: { A: angA, B: angB, C: angC },
+      lengths: { AB: a, BC: hyp, CA: b }
+    };
+    shapes = [tri]; // replace for clarity
+    measurePoints = [];
+    updateRulerFromShapes();
+    redraw();
+
+    // show results
+    const res = document.getElementById('rightResult');
+    res.style.display = 'block';
+    res.innerHTML = `
+      <div><strong>Hypotenuse:</strong> ${hyp.toFixed(3)} cm</div>
+      <div><strong>∠ at right angle (A):</strong> 90°</div>
+      <div><strong>∠ adjacent to ${a} cm side (at B):</strong> ${angB.toFixed(2)}°</div>
+      <div><strong>∠ adjacent to ${b} cm side (at C):</strong> ${angC.toFixed(2)}°</div>
+      <div style="margin-top:6px;color:#94a3b8">tan⁻¹(${b}/${a}) = ${angB.toFixed(2)}°</div>
+    `;
+    statusEl.textContent = `Right triangle drawn. Angle adjacent to the ${a} cm leg is ${angB.toFixed(2)}°.`;
+  }
+
+  function buildSSS() {
+    const a = parseFloat(document.getElementById('sideA').value);
+    const b = parseFloat(document.getElementById('sideB').value);
+    const c = parseFloat(document.getElementById('sideC').value);
+    if (!(a > 0 && b > 0 && c > 0)) {
+      statusEl.textContent = 'All sides must be positive.';
+      return;
+    }
+    // triangle inequality
+    if (a + b <= c || a + c <= b || b + c <= a) {
+      statusEl.textContent = 'Sides do not satisfy triangle inequality.';
+      return;
+    }
+    const labelStr = document.getElementById('sssLabels').value.trim() || 'a,b,c';
+    const labs = labelStr.split(',').map(s => s.trim());
+    const labA = labs[0] || a + '';
+    const labB = labs[1] || b + '';
+    const labC = labs[2] || c + '';
+
+    // Place side c on x-axis from (0,0) to (c,0). Vertex A opposite a, etc.
+    // Standard: side a opposite A, etc.
+    // Put vertex C at (0,0), B at (a,0)? Let's use:
+    // Vertex A at (0,0), vertex B at (c,0), vertex C somewhere.
+    // Side AB = c, side AC = b, side BC = a
+    const cosA = (b*b + c*c - a*a) / (2 * b * c);
+    const angA = Math.acos(Math.max(-1, Math.min(1, cosA))) * 180 / Math.PI;
+    const Cx = b * cosA;
+    const Cy = b * Math.sin(Math.acos(Math.max(-1, Math.min(1, cosA))));
+
+    const A = { x: 0, y: 0 };
+    const B = { x: c, y: 0 };
+    const C = { x: Cx, y: Cy };
+
+    const angB = Math.acos(Math.max(-1, Math.min(1, (a*a + c*c - b*b) / (2*a*c)))) * 180 / Math.PI;
+    const angC = 180 - angA - angB;
+
+    const tri = {
+      type: 'sss',
+      A, B, C,
+      sideLabels: { AB: labC, BC: labA, CA: labB },
+      labels: [labA, labB, labC],
+      angles: { A: angA, B: angB, C: angC },
+      lengths: { AB: c, BC: a, CA: b }
+    };
+    shapes = [tri];
+    measurePoints = [];
+    updateRulerFromShapes();
+    redraw();
+
+    const res = document.getElementById('sssResult');
+    res.style.display = 'block';
+    res.innerHTML = `
+      <div><strong>∠A:</strong> ${angA.toFixed(2)}°</div>
+      <div><strong>∠B:</strong> ${angB.toFixed(2)}°</div>
+      <div><strong>∠C:</strong> ${angC.toFixed(2)}°</div>
+    `;
+    statusEl.textContent = `SSS triangle drawn. Angles: ${angA.toFixed(1)}°, ${angB.toFixed(1)}°, ${angC.toFixed(1)}°.`;
+  }
+
+  function updateRulerFromShapes() {
+    // Always re-enable auto sizing when a new triangle is drawn
+    autoRuler = true;
+    const len = computeAutoRulerLength();
+    rulerLengthCm = len;
+    const input = document.getElementById('rulerLen');
+    if (input) input.value = len;
+  }
+
+  // ---------- events ----------
+  document.getElementById('drawRightBtn').addEventListener('click', buildRightTriangle);
+  document.getElementById('drawSSSBtn').addEventListener('click', buildSSS);
+
+  document.getElementById('pxPerCm').addEventListener('change', (e) => {
+    pxPerCm = Math.max(10, Math.min(100, parseFloat(e.target.value) || 40));
+    e.target.value = pxPerCm;
+    canvasInfo.textContent = `Canvas: ${Math.round(canvas.width / pxPerCm)} × ${Math.round(canvas.height / pxPerCm)} cm`;
+    redraw();
+  });
+
+  document.getElementById('rulerLen').addEventListener('change', (e) => {
+    const v = Math.max(1, Math.min(50, parseFloat(e.target.value) || 10));
+    e.target.value = v;
+    rulerLengthCm = v;
+    autoRuler = false; // user override — stop auto-resizing until next draw
+    redraw();
+  });
+
+  ['showGrid', 'showLabels', 'showAngles', 'showRuler'].forEach(id => {
+    document.getElementById(id).addEventListener('change', redraw);
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    shapes = [];
+    measurePoints = [];
+    autoRuler = true;
+    document.getElementById('rightResult').style.display = 'none';
+    document.getElementById('sssResult').style.display = 'none';
+    document.getElementById('measureResult').style.display = 'none';
+    statusEl.textContent = 'Cleared.';
+    redraw();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'triangle.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  const measureBtn = document.getElementById('measureBtn');
+  measureBtn.addEventListener('click', () => {
+    measureMode = !measureMode;
+    measureBtn.classList.toggle('active', measureMode);
+    measurePoints = [];
+    document.getElementById('measureResult').style.display = 'none';
+    statusEl.textContent = measureMode
+      ? 'Measure mode: click vertex, then a point on one ray, then a point on the other ray.'
+      : 'Measure mode off.';
+    redraw();
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (!measureMode) return;
+    const rect = canvas.getBoundingClientRect();
+    const pt = fromCanvas(e.clientX - rect.left, e.clientY - rect.top);
+    measurePoints.push(pt);
+    if (measurePoints.length === 3) {
+      const ang = angleAt(measurePoints[1], measurePoints[0], measurePoints[2]);
+      const res = document.getElementById('measureResult');
+      res.style.display = 'block';
+      res.innerHTML = `<div><strong>Measured angle:</strong> ${ang.toFixed(2)}°</div>`;
+      statusEl.textContent = `Measured angle: ${ang.toFixed(2)}°`;
+      // keep the three points visible
+    }
+    if (measurePoints.length > 3) {
+      measurePoints = [pt];
+      document.getElementById('measureResult').style.display = 'none';
+    }
+    redraw();
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    hoverPos = fromCanvas(e.clientX - rect.left, e.clientY - rect.top);
+    if (measureMode && measurePoints.length > 0 && measurePoints.length < 3) {
+      redraw();
+    }
+  });
+
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Auto-draw the example on load
+  buildRightTriangle();
+})();
+</script>
+</body>
+</html>
